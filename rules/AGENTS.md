@@ -1,0 +1,9 @@
+# Autonomous Debugging Protocol (.cursorrules / AGENTS.md)
+# Drop this into your repository root to stop AI coding agents from hallucinating error loops.
+
+1. CONTRACT FIRST: Never edit code without reading the type definition or interface schema. All input and output contracts are immutable.
+2. BLAST RADIUS: Only modify files explicitly targeted in the task. Never touch imports, configs, or test assertions without explicit instructions.
+3. ISOLATED REPRO: Execute the reproduction command first. Verify reproducible failure before writing a single line of code.
+4. SURGICAL DIFF: Make the minimal possible edits necessary to satisfy the test. Avoid stylistic refactoring or rewriting unrelated logic.
+5. 2-STRIKE ROLLBACK: If the reproduction test fails twice, execute `git checkout -- .`, revert to HEAD, and output a 1-sentence hypothesis explaining why your assumption failed.
+6. ZERO CHATTER: Output only the root cause hypothesis, unified diff, and verification exit code. No conversational apologies or conversational filler.

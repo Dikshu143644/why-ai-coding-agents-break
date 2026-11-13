@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>YouTube Video Studio: Why AI Coding Agents BREAK at Step 3?</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    @keyframes pulse-red {
+      0%, 100% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+      50% { box-shadow: 0 0 35px rgba(239, 68, 68, 0.85); }
+    }
+    @keyframes glitch {
+      0% { transform: translate(0) }
+      20% { transform: translate(-2px, 2px) }
+      40% { transform: translate(-2px, -2px) }
+      60% { transform: translate(2px, 2px) }
+      80% { transform: translate(2px, -2px) }
+      100% { transform: translate(0) }
+    }
+    .animate-glitch { animation: glitch 0.3s ease infinite alternate; }
+    .animate-pulse-red { animation: pulse-red 2s infinite; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(150, 150, 150, 0.3); border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased p-3 sm:p-5">
+
+  <div class="max-w-5xl mx-auto bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden">
+    
+    <!-- HEADER BAR -->
+    <div class="px-5 py-4 border-b border-[var(--border)] flex flex-wrap items-center justify-between gap-3 bg-[var(--sidebar)]/40">
+      <div class="flex items-center gap-3">
+        <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-600 text-white font-bold text-sm shadow-md">▶</span>
+        <div>
+          <h1 class="font-bold text-base sm:text-lg text-[var(--foreground)] leading-tight">Why AI Coding Agents BREAK at Step 3?</h1>
+          <p class="text-xs text-[var(--muted-foreground)]">Runtime: ~4m 30s • 7 Synced Scenes • Auto-Voiceover • Web Audio SFX</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-mono px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">● 100/100 Linter Score</span>
+        <button id="toggleVoiceBtn" onclick="toggleVoice()" class="text-xs font-medium px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--sidebar)] flex items-center gap-1.5 transition">
+          <span id="voiceIcon">🔊</span> <span id="voiceText">Voice: ON</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- MAIN VIDEO SCREEN (16:9 VIEWPORT) -->
+    <div class="relative w-full aspect-video bg-neutral-950 text-white overflow-hidden flex flex-col justify-between p-6 select-none border-b border-[var(--border)]" id="videoCanvas">
+      
+      <!-- TOP HUD -->
+      <div class="flex items-center justify-between z-10">
+        <div class="flex items-center gap-2 font-mono text-xs">
+          <span class="px-2 py-0.5 rounded bg-red-600 text-white font-bold tracking-wider uppercase text-[12px]" id="sceneBadge">SCENE 1: HOOK</span>
+          <span class="text-neutral-400" id="timeRemaining">00:00 / 04:30</span>
+        </div>
+        <div class="font-mono text-xs text-neutral-400 flex items-center gap-2">
+          <span class="inline-block w-2 h-2 rounded-full bg-red-500 animate-ping" id="recDot"></span>
+          <span id="clockDisplay">11:42 PM • TERMINAL LOG</span>
+        </div>
+      </div>
+
+      <!-- DYNAMIC SCENE CONTAINER (Animated per beat) -->
+      <div class="my-auto w-full max-w-3xl mx-auto z-10 transition-all duration-500" id="sceneContent">
+        <!-- Rendered by JS -->
+      </div>
+
+      <!-- BOTTOM TELEPROMPTER SUBTITLE BAR -->
+      <div class="w-full bg-black/80 backdrop-blur-md rounded-xl p-3 border border-neutral-800 z-10">
+        <div class="text-center font-medium text-sm sm:text-base leading-snug text-neutral-200" id="subtitleText">
+          "Everyone tells you AI writes code 10x faster, but stop: why do you waste 3 hours debugging what broke 10 lines?"
+        </div>
+        <div class="flex justify-between items-center mt-2 pt-2 border-t border-neutral-800 text-[12px] font-mono text-neutral-400">
+          <span id="onScreenCue">🎥 [ON SCREEN]: Cold open on IDE terminal flooded with red stack traces</span>
+          <span id="sfxCue">🔊 [SFX]: Error buzz & resonant drone</span>
+        </div>
+      </div>
+
+      <!-- CINEMATIC VIGNETTE OVERLAY -->
+      <div class="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/60 via-transparent to-black/40"></div>
+    </div>
+
+    <!-- VIDEO CONTROLLER / SCRUBBER -->
+    <div class="p-4 sm:p-5 bg-[var(--card)] space-y-3">
+      
+      <!-- TIMELINE & SCRUBBER -->
+      <div class="space-y-1">
+        <div class="flex justify-between text-xs font-mono text-[var(--muted-foreground)]">
+          <span id="currentTimeLabel">0:00</span>
+          <span id="sceneTitleLabel">Scene 1: The Hook (0:00 - 0:15)</span>
+          <span id="totalTimeLabel">4:30</span>
+        </div>
+        <div class="relative w-full h-3 bg-[var(--sidebar)] rounded-full overflow-hidden cursor-pointer" onclick="seekTimeline(event)">
+          <!-- Progress Fill -->
+          <div id="timelineProgress" class="absolute left-0 top-0 bottom-0 bg-red-600 rounded-full transition-all duration-150" style="width: 0%"></div>
+          <!-- Chapter markers -->
+          <div class="absolute inset-0 flex justify-between pointer-events-none px-1">
+            <span class="w-0.5 h-full bg-white/30" title="The Turn"></span>
+            <span class="w-0.5 h-full bg-white/30" style="margin-left: 5%" title="Beat 1"></span>
+            <span class="w-0.5 h-full bg-white/30" style="margin-left: 20%" title="Beat 2"></span>
+            <span class="w-0.5 h-full bg-white/30" style="margin-left: 45%" title="Beat 3"></span>
+            <span class="w-0.5 h-full bg-white/30" style="margin-left: 70%" title="Payoff"></span>
+            <span class="w-0.5 h-full bg-white/30" style="margin-left: 90%" title="Outro"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- BUTTON CONTROLS -->
+      <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+        <div class="flex items-center gap-2">
+          <!-- Play / Pause -->
+          <button id="playBtn" onclick="togglePlay()" class="w-10 h-10 rounded-xl bg-red-600 hover:bg-red-700 text-white flex items-center justify-center font-bold text-lg shadow-lg transition active:scale-95">
+            ▶
+          </button>
+          <!-- Prev / Next Scene -->
+          <button onclick="prevScene()" class="w-9 h-9 rounded-lg border border-[var(--border)] bg-[var(--sidebar)] hover:bg-[var(--card)] flex items-center justify-center text-sm transition">
+            ⏮
+          </button>
+          <button onclick="nextScene()" class="w-9 h-9 rounded-lg border border-[var(--border)] bg-[var(--sidebar)] hover:bg-[var(--card)] flex items-center justify-center text-sm transition">
+            ⏭
+          </button>
+          <!-- Restart -->
+          <button onclick="restartVideo()" class="w-9 h-9 rounded-lg border border-[var(--border)] bg-[var(--sidebar)] hover:bg-[var(--card)] flex items-center justify-center text-sm transition" title="Restart">
+            🔄
+          </button>
+        </div>
+
+        <!-- CHAPTER CHIPS -->
+        <div class="flex items-center gap-1.5 overflow-x-auto py-1 custom-scrollbar">
+          <button onclick="jumpTo(0)" class="chap-btn text-xs font-mono px-2.5 py-1 rounded-md bg-red-600 text-white font-medium whitespace-nowrap">Hook</button>
+          <button onclick="jumpTo(1)" class="chap-btn text-xs font-mono px-2.5 py-1 rounded-md bg-[var(--sidebar)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] whitespace-nowrap">Turn</button>
+          <button onclick="jumpTo(2)" class="chap-btn text-xs font-mono px-2.5 py-1 rounded-md bg-[var(--sidebar)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] whitespace-nowrap">Context Trap</button>
+          <button onclick="jumpTo(3)" class="chap-btn text-xs font-mono px-2.5 py-1 rounded-md bg-[var(--sidebar)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] whitespace-nowrap">3 Anchors</button>
+          <button onclick="jumpTo(4)" class="chap-btn text-xs font-mono px-2.5 py-1 rounded-md bg-[var(--sidebar)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] whitespace-nowrap">Self-Healing</button>
+          <button onclick="jumpTo(5)" class="chap-btn text-xs font-mono px-2.5 py-1 rounded-md bg-[var(--sidebar)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] whitespace-nowrap">Blueprint</button>
+          <button onclick="jumpTo(6)" class="chap-btn text-xs font-mono px-2.5 py-1 rounded-md bg-[var(--sidebar)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] whitespace-nowrap">Close</button>
+        </div>
+
+        <!-- SPEED & ACTION BUTTONS -->
+        <div class="flex items-center gap-2">
+          <div class="flex items-center rounded-lg border border-[var(--border)] bg-[var(--sidebar)] p-0.5 text-xs font-mono">
+            <button onclick="setSpeed(1.0)" class="speed-btn px-2 py-0.5 rounded bg-[var(--card)] text-[var(--foreground)] font-bold">1x</button>
+            <button onclick="setSpeed(1.25)" class="speed-btn px-2 py-0.5 rounded text-[var(--muted-foreground)]">1.25x</button>
+            <button onclick="setSpeed(1.5)" class="speed-btn px-2 py-0.5 rounded text-[var(--muted-foreground)]">1.5x</button>
+          </div>
+          <button onclick="copyBlueprint()" class="text-xs font-medium px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 transition">
+            📋 Copy Rules
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRODUCTION ASSETS DRAWER -->
+    <div class="border-t border-[var(--border)] p-5 bg-[var(--sidebar)]/30 space-y-4">
+      <h3 class="text-sm font-semibold text-[var(--foreground)] flex items-center justify-between">
+        <span>🎬 Studio Production Assets</span>
+        <span class="text-xs text-[var(--muted-foreground)] font-normal">Synthesized Audio & High-Res Thumbnail Ready</span>
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+        <div class="p-3 rounded-xl border border-[var(--border)] bg-[var(--card)]">
+          <span class="font-bold text-red-500">1. Thumbnail Image</span>
+          <p class="text-[var(--muted-foreground)] mt-1">16:9 4K render with split crimson/cyan scene & 'THE 1 FIX' 3D text.</p>
+          <a href="file:///C:/Users/omkar/.gemini/antigravity/brain/07a22e33-6f4e-47b7-9ea9-c71967346d1e/ai_debugging_thumbnail_1794396770261.jpg" target="_blank" class="inline-block mt-2 font-medium text-cyan-400 hover:underline">Open Thumbnail File →</a>
+        </div>
+        <div class="p-3 rounded-xl border border-[var(--border)] bg-[var(--card)]">
+          <span class="font-bold text-emerald-500">2. Voiceover WAVs</span>
+          <p class="text-[var(--muted-foreground)] mt-1">7 section audio files rendered via System.Speech Synthesis (David Desktop).</p>
+          <span class="inline-block mt-2 font-mono text-[12px] text-emerald-400">7 files generated in /audio/</span>
+        </div>
+        <div class="p-3 rounded-xl border border-[var(--border)] bg-[var(--card)]">
+          <span class="font-bold text-amber-500">3. Full Script & SEO</span>
+          <p class="text-[var(--muted-foreground)] mt-1">Full 678-word transcript, 18 tags, chapters, and community teaser post.</p>
+          <a href="file:///C:/Users/omkar/.gemini/antigravity/brain/07a22e33-6f4e-47b7-9ea9-c71967346d1e/complete_video_production_package.md" target="_blank" class="inline-block mt-2 font-medium text-amber-400 hover:underline">View Production MD →</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SCRIPT ENGINE: SYNTHESIS, VISUALS, SOUND DESIGN -->
+  <script>
+    // VIDEO SCENES DATA
+    const SCENES = [
+      {
+        id: "hook",
+        badge: "SCENE 1: THE HOOK (0:00 - 0:15)",
+        title: "The Hook",
+        duration: 15,
+        spoken: "Everyone tells you AI writes code 10 times faster, but stop: why do you waste 3 hours debugging what broke 10 lines? You paste a stack trace into chat, hit Enter, and suddenly your simple endpoint has five hallucinated dependencies, two broken imports, and code that refuses to compile. The AI didn't break your codebase. Your debugging workflow did.",
+        onScreen: "🎥 [ON SCREEN]: Cold open on IDE terminal flooded with red stack traces (11:42 PM).",
+        sfx: "🔊 [SFX]: Harsh error buzz & low resonant drone.",
+        sfxType: "buzz",
+        render: () => `
+          <div class="p-5 bg-neutral-900/90 rounded-xl border border-red-500/60 animate-pulse-red text-left font-mono">
+            <div class="flex items-center justify-between pb-3 border-b border-neutral-800 text-xs text-neutral-400">
+              <span class="text-red-400 font-bold flex items-center gap-2">● Terminal: build_failure.log</span>
+              <span class="bg-red-500/20 text-red-400 px-2 py-0.5 rounded">EXIT 1 (FATAL)</span>
+            </div>
+            <div class="text-xs sm:text-sm text-red-300 space-y-1.5 mt-3 animate-glitch">
+              <div>[11:42:01 PM] <span class="text-red-500 font-bold">CRITICAL:</span> ModuleNotFoundError: 'auth.v2.internal_auth'</div>
+              <div>[11:42:02 PM] <span class="text-amber-400">TypeError:</span> Cannot read properties of undefined (reading 'jwt_verify')</div>
+              <div>[11:42:03 PM] <span class="text-red-400">RecursionError:</span> Maximum call stack size exceeded in AI generated patch</div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-neutral-800 flex items-center justify-between text-[12px] text-neutral-400">
+              <span>PROMPT ATTEMPTS: <b class="text-red-400">4 FAILED</b></span>
+              <span>TIME LOST: <b class="text-amber-400">3h 12m</b></span>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: "turn",
+        badge: "SCENE 2: THE TURN (0:15 - 0:40)",
+        title: "The Turn",
+        duration: 25,
+        spoken: "In the next four minutes, I will show you the exact mechanism causing your AI models to hallucinate while debugging, and hand you the three-anchor framework that kills the error loop in under ninety seconds. No prompt engineering tricks, no wrappers, just three rigid engineering constraints you can drop into Cursor, Claude, or Antigravity right now.",
+        onScreen: "🎥 [ON SCREEN]: Split screen showing 200-line broken prompt replaced by 3-part blueprint.",
+        sfx: "🔊 [SFX]: Digital swoosh into steady tech-synth baseline.",
+        sfxType: "swoosh",
+        render: () => `
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
+            <div class="p-4 rounded-xl border border-cyan-500/40 bg-cyan-950/20 backdrop-blur-md">
+              <div class="text-2xl mb-1">📐</div>
+              <div class="font-bold text-sm text-cyan-300">1. CONTRACT</div>
+              <div class="text-xs text-neutral-400 mt-1">Immutable Types & Schemas</div>
+            </div>
+            <div class="p-4 rounded-xl border border-purple-500/40 bg-purple-950/20 backdrop-blur-md">
+              <div class="text-2xl mb-1">🛡️</div>
+              <div class="font-bold text-sm text-purple-300">2. BLAST RADIUS</div>
+              <div class="text-xs text-neutral-400 mt-1">Strict File Perimeter</div>
+            </div>
+            <div class="p-4 rounded-xl border border-emerald-500/40 bg-emerald-950/20 backdrop-blur-md">
+              <div class="text-2xl mb-1">🧪</div>
+              <div class="font-bold text-sm text-emerald-300">3. PROOF</div>
+              <div class="text-xs text-neutral-400 mt-1">Deterministic Test Execution</div>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: "beat1",
+        badge: "SCENE 3: THE CONTEXT TRAP (0:40 - 1:45)",
+        title: "The Context Trap",
+        duration: 65,
+        spoken: "Here is the mistake you are repeating every afternoon: The Context Trap. When an error hits your terminal, your instinct is to copy forty lines of red stack trace, dump it into the AI prompt, and say fix this. The AI looks at that stack trace without runtime context, assumes the worst, and rewrites your function. It changes a variable name. Now your test throws a new error. So you paste that new error back in. The model apologizes, generates a second patch, and quietly breaks your database schema. By prompt number four, your context window is clogged with six thousand tokens of obsolete code, conflicting variable names, and polite model apologies. The AI isn't debugging your codebase anymore. It is debugging its own hallucinations from two prompts ago.",
+        onScreen: "🎥 [ON SCREEN]: Animated Token Gauge filling 1K -> 8K tokens with Hallucination Loop alert.",
+        sfx: "🔊 [SFX]: Descending glitch chime on apology text & static alarm.",
+        sfxType: "alarm",
+        render: () => `
+          <div class="p-5 rounded-xl border border-amber-500/40 bg-amber-950/20 space-y-3 font-mono text-left">
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-amber-400 font-bold">CONTEXT ROT DETECTED</span>
+              <span class="text-red-400 font-bold animate-pulse">8,420 TOKENS (POISONED)</span>
+            </div>
+            <div class="w-full bg-neutral-900 rounded-full h-3 overflow-hidden border border-neutral-700">
+              <div class="bg-gradient-to-r from-emerald-500 via-amber-500 to-red-600 h-full w-[88%]"></div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-[12px] pt-1">
+              <div class="p-2 bg-neutral-900/60 rounded border border-neutral-800 text-neutral-300">
+                ⚠️ <b>Turn 1:</b> AI apologizes ("I'm sorry!")
+              </div>
+              <div class="p-2 bg-neutral-900/60 rounded border border-neutral-800 text-neutral-300">
+                ⚠️ <b>Turn 2:</b> Rewrites valid imports
+              </div>
+              <div class="p-2 bg-neutral-900/60 rounded border border-neutral-800 text-neutral-300">
+                ⚠️ <b>Turn 3:</b> Contradicts schema types
+              </div>
+              <div class="p-2 bg-neutral-900/60 rounded border border-neutral-800 text-red-300">
+                🚨 <b>Turn 4:</b> Infinite recursive loop
+              </div>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: "beat2",
+        badge: "SCENE 4: THE 3-ANCHOR FRAMEWORK (1:45 - 2:55)",
+        title: "3-Anchor Framework",
+        duration: 70,
+        spoken: "To stop the bleeding, you need the 3-Anchor Framework. Before you allow an AI agent to touch a single line of broken code, you lock down three rigid boundaries. Anchor number one is the Contract Anchor. You never paste raw errors without the interface definition. Feed it the TypeScript type, the Pydantic schema, or the exact function signature. You tell the model: This input and output contract is immutable. Adapt your logic to this shape, never change the shape. Anchor number two is the Blast Radius. When models debug in open space, they refactor files they shouldn't even know exist. You explicitly bound the perimeter: You may only edit lines forty-two through sixty-eight inside auth.py. Touching imports, configuration, or database models is strictly forbidden. Anchor number three is the Proof Anchor. You never ask: Does this look right? You provide a single deterministic repro command: an isolated unit test or a curl command. The model only wins when the test passes without altering the test itself.",
+        onScreen: "🎥 [ON SCREEN]: Code editor splits. Left pane locked; lines 42-68 highlighted with active test.",
+        sfx: "🔊 [SFX]: Three metallic locking impacts & test pass chime.",
+        sfxType: "metal",
+        render: () => `
+          <div class="p-4 rounded-xl border border-cyan-500/50 bg-neutral-900/90 font-mono text-left text-xs space-y-2">
+            <div class="flex items-center justify-between pb-2 border-b border-neutral-800 text-neutral-400">
+              <span class="text-cyan-400 font-bold">🔒 auth_service.ts (BLAST RADIUS LOCKED)</span>
+              <span class="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">PROOF: PASS</span>
+            </div>
+            <div class="text-neutral-500 opacity-60">
+              01 | import { DB } from '../config'; <span class="text-red-400 font-bold">[LOCKED]</span><br>
+              02 | import { TokenPayload } from './types'; <span class="text-red-400 font-bold">[LOCKED]</span>
+            </div>
+            <div class="bg-cyan-500/10 border-l-2 border-cyan-400 p-2 my-1 text-cyan-200">
+              42 | export async function verifyToken(raw: string): Promise&lt;TokenPayload&gt; {<br>
+              43 |   // SURGICAL FIX APPLIED HERE ONLY<br>
+              44 |   return jwt.verify(raw, process.env.SECRET) as TokenPayload;<br>
+              45 | }
+            </div>
+            <div class="text-neutral-500 opacity-60">
+              69 | export const DEFAULT_PERMS = ['read']; <span class="text-red-400 font-bold">[LOCKED]</span>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: "beat3",
+        badge: "SCENE 5: AUTONOMOUS SELF-HEALING (2:55 - 3:55)",
+        title: "Autonomous Self-Healing",
+        duration: 60,
+        spoken: "Once your anchors are set, you put the model inside an Autonomous Self-Healing Loop. Instead of acting as a human copy-paste machine between your terminal and the chat window, you give your agent local tool execution with a hard stop condition. The loop runs three steps: execute the repro command, inspect the stdout, and apply a surgical diff. Crucially, you enforce a two-attempt limit. If the test fails twice, the agent is forbidden from guessing a third time. The rule mandates that it runs git diff, reverts its own changes back to HEAD, and outputs a one-sentence hypothesis explaining why its assumption failed before touching code again. This single constraint prevents the death spiral where an AI writes thirty lines of workaround code to fix a bug caused by its own previous patch.",
+        onScreen: "🎥 [ON SCREEN]: Animated loop: [Repro Test] -> [Inspect Exit Code] -> [Surgical Diff] -> [2-Fail Revert].",
+        sfx: "🔊 [SFX]: Fast tape-rewind SFX & clean snap.",
+        sfxType: "rewind",
+        render: () => `
+          <div class="p-4 rounded-xl border border-emerald-500/40 bg-neutral-900/90 text-center font-mono">
+            <div class="text-xs text-neutral-400 mb-3 font-bold tracking-wider">AUTONOMOUS 2-STRIKE STATE MACHINE</div>
+            <div class="flex items-center justify-between text-xs gap-1">
+              <div class="p-2 rounded bg-neutral-800 text-neutral-300 flex-1">1. Run Repro</div>
+              <span class="text-neutral-500">→</span>
+              <div class="p-2 rounded bg-neutral-800 text-neutral-300 flex-1">2. Surgical Diff</div>
+              <span class="text-neutral-500">→</span>
+              <div class="p-2 rounded bg-amber-500/20 text-amber-300 flex-1 border border-amber-500/40">3. Strike Counter</div>
+            </div>
+            <div class="mt-3 p-2.5 rounded bg-red-950/40 border border-red-500/40 text-xs text-left text-red-200">
+              <span class="text-red-400 font-bold">STRIKE 2 EXCEEDED:</span> Automatic Rollback Triggered!<br>
+              <code class="text-neutral-400">&gt; git checkout -- . &amp;&amp; cat hypothesis.log</code><br>
+              <span class="text-emerald-400 text-[12px] mt-1 block">✔ Hypothesis: Token parser was expecting bearer prefix.</span>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: "payoff",
+        badge: "SCENE 6: THE BLUEPRINT (3:55 - 4:35)",
+        title: "The Payoff",
+        duration: 40,
+        spoken: "That is the entire system. And to make this effortless, I wrote the exact twelve-line rule blueprint that embeds the Contract, Blast Radius, and Self-Healing constraints directly into your editor's system rules. That is the blueprint, it is in the description below, completely free. Copy it into your project's rules file, whether you use Cursor, Antigravity, or Claude Code. Next time your build breaks, you won't touch the prompt box. The rule forces the model to stay inside the box and resolve the root cause on the first pass.",
+        onScreen: "🎥 [ON SCREEN]: Full screen graphic displaying the clean 12-line rules template (.cursorrules / AGENTS.md).",
+        sfx: "🔊 [SFX]: Uplifting synth chord & crisp camera shutter.",
+        sfxType: "chime",
+        render: () => `
+          <div class="p-4 rounded-xl border border-purple-500/50 bg-neutral-900/90 font-mono text-left text-xs space-y-1">
+            <div class="flex justify-between items-center pb-2 border-b border-neutral-800">
+              <span class="text-purple-400 font-bold">📄 .cursorrules / AGENTS.md (12-Line Protocol)</span>
+              <span class="text-emerald-400">FREE DOWNLOAD</span>
+            </div>
+            <div class="text-neutral-300 space-y-1 pt-1">
+              <div><b class="text-cyan-400">1. CONTRACT FIRST:</b> Never edit code without reading type definitions.</div>
+              <div><b class="text-purple-400">2. BLAST RADIUS:</b> Only modify files targeted in scope.</div>
+              <div><b class="text-emerald-400">3. ISOLATED REPRO:</b> Execute test command before touching code.</div>
+              <div><b class="text-amber-400">4. 2-STRIKE ROLLBACK:</b> If test fails twice, revert to HEAD.</div>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: "close",
+        badge: "SCENE 7: OUTRO (4:35 - 4:45)",
+        title: "Outro & Subscribe",
+        duration: 10,
+        spoken: "Drop that blueprint into your repository root today, run your next failing test through it, and subscribe if it saved your evening.",
+        onScreen: "🎥 [ON SCREEN]: Host on camera; GitHub repository link and Subscribe card animation.",
+        sfx: "🔊 [SFX]: Deep bass drop into smooth outro music fade.",
+        sfxType: "bass",
+        render: () => `
+          <div class="p-6 rounded-xl border border-red-500/40 bg-neutral-900/90 text-center space-y-3">
+            <div class="text-3xl">🚀</div>
+            <h2 class="text-lg font-bold text-white">Save Your Next 3 Hours Today</h2>
+            <div class="flex items-center justify-center gap-3 pt-2">
+              <button onclick="copyBlueprint()" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition">
+                Get .cursorrules Blueprint
+              </button>
+              <button class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-md transition">
+                Subscribe for More (Weekly)
+              </button>
+            </div>
+          </div>
+        `
+      }
+    ];
+
+    // STATE
+    let currentSceneIdx = 0;
+    let isPlaying = false;
+    let playTimer = null;
+    let currentElapsed = 0;
+    let playbackSpeed = 1.0;
+    let voiceEnabled = true;
+
+    // WEB AUDIO SYNTHESIZER
+    let audioCtx = null;
+    function getAudioContext() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      return audioCtx;
+    }
+
+    function playSFX(type) {
+      if (!voiceEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        if (ctx.state === 'suspended') ctx.resume();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        const now = ctx.currentTime;
+        if (type === 'buzz') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(110, now);
+          osc.frequency.exponentialRampToValueAtTime(55, now + 0.3);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+          osc.start(now);
+          osc.stop(now + 0.3);
+        } else if (type === 'swoosh') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(300, now);
+          osc.frequency.exponentialRampToValueAtTime(800, now + 0.25);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+          osc.start(now);
+          osc.stop(now + 0.25);
+        } else if (type === 'metal') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(440, now);
+          osc.frequency.exponentialRampToValueAtTime(120, now + 0.2);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+          osc.start(now);
+          osc.stop(now + 0.2);
+        } else if (type === 'chime') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(587.33, now); // D5
+          osc.frequency.setValueAtTime(880, now + 0.1); // A5
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+          osc.start(now);
+          osc.stop(now + 0.4);
+        }
+      } catch (e) {
+        console.warn("WebAudio not permitted yet:", e);
+      }
+    }
+
+    // SPEECH SYNTHESIS
+    function speakText(text) {
+      if (!voiceEnabled || !('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.rate = playbackSpeed;
+      utter.pitch = 1.0;
+      
+      const voices = window.speechSynthesis.getVoices();
+      const engVoice = voices.find(v => v.lang.includes('en') && (v.name.includes('David') || v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Male')));
+      if (engVoice) utter.voice = engVoice;
+      
+      window.speechSynthesis.speak(utter);
+    }
+
+    // SCENE SWITCHER
+    function renderScene(idx) {
+      currentSceneIdx = idx;
+      const scene = SCENES[idx];
+      
+      document.getElementById('sceneBadge').innerText = scene.badge;
+      document.getElementById('sceneContent').innerHTML = scene.render();
+      document.getElementById('subtitleText').innerText = `"${scene.spoken}"`;
+      document.getElementById('onScreenCue').innerText = scene.onScreen;
+      document.getElementById('sfxCue').innerText = scene.sfx;
+      document.getElementById('sceneTitleLabel').innerText = `${scene.title} (${formatTime(getSceneStartTime(idx))} - ${formatTime(getSceneStartTime(idx) + scene.duration)})`;
+      
+      // Update chips
+      const chips = document.querySelectorAll('.chap-btn');
+      chips.forEach((c, i) => {
+        if (i === idx) {
+          c.className = 'chap-btn text-xs font-mono px-2.5 py-1 rounded-md bg-red-600 text-white font-medium whitespace-nowrap shadow-sm';
+        } else {
+          c.className = 'chap-btn text-xs font-mono px-2.5 py-1 rounded-md bg-[var(--sidebar)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] whitespace-nowrap';
+        }
+      });
+
+      playSFX(scene.sfxType);
+      if (isPlaying) {
+        speakText(scene.spoken);
+      }
+    }
+
+    function getSceneStartTime(idx) {
+      let t = 0;
+      for (let i = 0; i < idx; i++) t += SCENES[i].duration;
+      return t;
+    }
+
+    function getTotalDuration() {
+      return SCENES.reduce((acc, s) => acc + s.duration, 0);
+    }
+
+    function formatTime(secs) {
+      const m = Math.floor(secs / 60);
+      const s = Math.floor(secs % 60);
+      return `${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+
+    // PLAYBACK CONTROLS
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      const btn = document.getElementById('playBtn');
+      const recDot = document.getElementById('recDot');
+      
+      if (isPlaying) {
+        btn.innerText = '⏸';
+        btn.className = 'w-10 h-10 rounded-xl bg-amber-600 hover:bg-amber-700 text-white flex items-center justify-center font-bold text-lg shadow-lg transition';
+        recDot.classList.remove('hidden');
+        speakText(SCENES[currentSceneIdx].spoken);
+        startTimer();
+      } else {
+        btn.innerText = '▶';
+        btn.className = 'w-10 h-10 rounded-xl bg-red-600 hover:bg-red-700 text-white flex items-center justify-center font-bold text-lg shadow-lg transition';
+        recDot.classList.add('hidden');
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+        stopTimer();
+      }
+    }
+
+    function startTimer() {
+      stopTimer();
+      playTimer = setInterval(() => {
+        currentElapsed += 1 * playbackSpeed;
+        const total = getTotalDuration();
+        
+        if (currentElapsed >= total) {
+          restartVideo();
+          return;
+        }
+
+        // Update progress bar
+        const pct = (currentElapsed / total) * 100;
+        document.getElementById('timelineProgress').style.width = pct + '%';
+        document.getElementById('currentTimeLabel').innerText = formatTime(currentElapsed);
+        document.getElementById('timeRemaining').innerText = `${formatTime(currentElapsed)} / ${formatTime(total)}`;
+
+        // Check if scene needs to advance
+        let accum = 0;
+        for (let i = 0; i < SCENES.length; i++) {
+          accum += SCENES[i].duration;
+          if (currentElapsed <= accum) {
+            if (currentSceneIdx !== i) {
+              renderScene(i);
+            }
+            break;
+          }
+        }
+      }, 1000);
+    }
+
+    function stopTimer() {
+      if (playTimer) clearInterval(playTimer);
+      playTimer = null;
+    }
+
+    function restartVideo() {
+      currentElapsed = 0;
+      document.getElementById('timelineProgress').style.width = '0%';
+      document.getElementById('currentTimeLabel').innerText = '0:00';
+      if (isPlaying) togglePlay();
+      renderScene(0);
+    }
+
+    function prevScene() {
+      if (currentSceneIdx > 0) jumpTo(currentSceneIdx - 1);
+    }
+
+    function nextScene() {
+      if (currentSceneIdx < SCENES.length - 1) jumpTo(currentSceneIdx + 1);
+    }
+
+    function jumpTo(idx) {
+      currentSceneIdx = idx;
+      currentElapsed = getSceneStartTime(idx);
+      const total = getTotalDuration();
+      document.getElementById('timelineProgress').style.width = ((currentElapsed / total) * 100) + '%';
+      document.getElementById('currentTimeLabel').innerText = formatTime(currentElapsed);
+      renderScene(idx);
+    }
+
+    function seekTimeline(event) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const clickX = event.clientX - rect.left;
+      const pct = Math.max(0, Math.min(1, clickX / rect.width));
+      const total = getTotalDuration();
+      currentElapsed = pct * total;
+      document.getElementById('timelineProgress').style.width = (pct * 100) + '%';
+      document.getElementById('currentTimeLabel').innerText = formatTime(currentElapsed);
+      
+      let accum = 0;
+      for (let i = 0; i < SCENES.length; i++) {
+        accum += SCENES[i].duration;
+        if (currentElapsed <= accum) {
+          renderScene(i);
+          break;
+        }
+      }
+    }
+
+    function setSpeed(sp) {
+      playbackSpeed = sp;
+      document.querySelectorAll('.speed-btn').forEach(btn => {
+        if (btn.innerText === sp + 'x') {
+          btn.className = 'speed-btn px-2 py-0.5 rounded bg-[var(--card)] text-[var(--foreground)] font-bold';
+        } else {
+          btn.className = 'speed-btn px-2 py-0.5 rounded text-[var(--muted-foreground)]';
+        }
+      });
+      if (isPlaying) {
+        speakText(SCENES[currentSceneIdx].spoken);
+      }
+    }
+
+    function toggleVoice() {
+      voiceEnabled = !voiceEnabled;
+      const icon = document.getElementById('voiceIcon');
+      const txt = document.getElementById('voiceText');
+      if (voiceEnabled) {
+        icon.innerText = '🔊';
+        txt.innerText = 'Voice: ON';
+        if (isPlaying) speakText(SCENES[currentSceneIdx].spoken);
+      } else {
+        icon.innerText = '🔇';
+        txt.innerText = 'Voice: OFF';
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      }
+    }
+
+    function copyBlueprint() {
+      const blueprint = `# Autonomous Debugging Protocol (.cursorrules / AGENTS.md)\n1. CONTRACT FIRST: Never edit code without reading type definitions. All I/O schemas are immutable.\n2. BLAST RADIUS: Only modify files explicitly targeted. Never touch imports, configs, or test assertions.\n3. ISOLATED REPRO: Execute repro command first. Verify reproducible failure before writing code.\n4. SURGICAL DIFF: Make minimal possible edits necessary to pass test. No stylistic refactoring.\n5. 2-STRIKE ROLLBACK: If verification fails twice, execute 'git checkout -- .' and state failed hypothesis.\n6. ZERO CHATTER: Output only root cause hypothesis, unified diff, and exit code. No conversational filler.`;
+      navigator.clipboard.writeText(blueprint).then(() => {
+        alert("Copied 12-Line Protocol Blueprint to clipboard!");
+      });
+    }
+
+    // INITIALIZE
+    window.addEventListener('DOMContentLoaded', () => {
+      renderScene(0);
+      // Pre-warm speech synthesis voices
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+      }
+    });
+
+    // KEYBOARD SHORTCUTS
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePlay();
+      } else if (e.code === 'ArrowRight') {
+        nextScene();
+      } else if (e.code === 'ArrowLeft') {
+        prevScene();
+      }
+    });
+  </script>
+</body>
+</html>
